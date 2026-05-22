@@ -11,6 +11,9 @@
 
 import logging
 import os
+import signal
+import sys
+from pathlib import Path
 from telegram import Update
 from telegram.error import TimedOut, NetworkError
 from telegram.ext import (
@@ -132,4 +135,28 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    pidfile = Path(__file__).parent / "bot.pid"
+
+    # Проверка двойного запуска
+    if pidfile.exists():
+        old_pid = int(pidfile.read_text().strip())
+        try:
+            os.kill(old_pid, 0)
+            print(f"Бот уже запущен (PID {old_pid}). Используйте bot.sh stop для остановки.")
+            sys.exit(1)
+        except ProcessLookupError:
+            pidfile.unlink()  # устаревший PID-файл
+
+    pidfile.write_text(str(os.getpid()))
+
+    def _cleanup(sig=None, frame=None):
+        pidfile.unlink(missing_ok=True)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _cleanup)
+    signal.signal(signal.SIGINT, _cleanup)
+
+    try:
+        main()
+    finally:
+        pidfile.unlink(missing_ok=True)
