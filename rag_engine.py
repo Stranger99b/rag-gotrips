@@ -28,9 +28,9 @@ SYSTEM_PROMPT = """Ты — менеджер туристической комп
 Ниже приведены примеры реальных переписок менеджеров с клиентами.
 Используй их как образец стиля и содержания ответов."""
 
-TOP_K = 5
-CLAUDE_TIMEOUT = 120
-EXAMPLE_MAX_CHARS = 300  # обрезаем длинные примеры чтобы не раздувать промпт
+TOP_K = 3
+CLAUDE_TIMEOUT = 90
+EXAMPLE_MAX_CHARS = 300
 
 
 class RAGEngine:
@@ -88,7 +88,7 @@ class RAGEngine:
         result = subprocess.run(
             [
                 "claude", "--print",
-                "--model", "claude-sonnet-4-6",
+                "--model", "haiku",
                 "--system-prompt", SYSTEM_PROMPT,
             ],
             input=full_prompt,
@@ -98,6 +98,7 @@ class RAGEngine:
         )
 
         if result.returncode != 0:
-            raise RuntimeError(f"claude CLI error: {result.stderr[:300]}")
+            err = (result.stderr or result.stdout or "empty output")[:400]
+            raise RuntimeError(f"claude CLI error (code {result.returncode}): {err}")
 
         return result.stdout.strip()
