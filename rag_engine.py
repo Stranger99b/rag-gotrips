@@ -8,7 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
-import anthropic
+import httpx
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 
@@ -122,12 +122,20 @@ class RAGEngine:
         full_prompt = "\n\n".join(parts)
 
         token = _get_valid_token()
-        client = anthropic.Anthropic(api_key=token)
-
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=512,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": full_prompt}],
+        response = httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": CLAUDE_MODEL,
+                "max_tokens": 512,
+                "system": SYSTEM_PROMPT,
+                "messages": [{"role": "user", "content": full_prompt}],
+            },
+            timeout=60,
         )
-        return response.content[0].text.strip()
+        response.raise_for_status()
+        return response.json()["content"][0]["text"].strip()
