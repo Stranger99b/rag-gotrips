@@ -51,12 +51,18 @@ class RAGEngine:
         )
         return [r.payload for r in results.points]
 
-    def answer(self, user_message: str, chat_history: list[dict] | None = None) -> str:
+    def answer(
+        self,
+        user_message: str,
+        chat_history: list[dict] | None = None,
+        examples: list[dict] | None = None,
+    ) -> str:
         """
         user_message: текущее сообщение клиента
         chat_history: [{"role": "user"|"assistant", "content": "..."}]
+        examples: предварительно найденные примеры из search() — если None, ищет сам
         """
-        similar = self.search(user_message)
+        similar = examples if examples is not None else self.search(user_message)
 
         examples_block = "\n\n".join(
             f"---\nКлиент: {ex['client_text']}\nМенеджер: {ex['manager_text']}"

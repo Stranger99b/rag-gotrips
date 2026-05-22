@@ -60,9 +60,11 @@ async def cmd_debug(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     lines = []
     for i, ex in enumerate(examples, 1):
-        lines.append(f"[{i}] {ex['date']} / {ex.get('messenger', '?')}")
-        lines.append(f"К: {ex['client_text'][:120]}...")
-        lines.append(f"М: {ex['manager_text'][:120]}...")
+        date = ex.get("date", "?")
+        channel = ex.get("channel", "?")
+        lines.append(f"[{i}] {date} / {channel}")
+        lines.append(f"К: {ex['client_text'][:120]}")
+        lines.append(f"М: {ex['manager_text'][:120]}")
         lines.append("")
 
     await update.message.reply_text("\n".join(lines)[:4000])
@@ -77,14 +79,14 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     history = chat_histories.get(chat_id, [])
 
-    # Сохраняем найденные примеры для /debug
+    await update.message.chat.send_action("typing")
+
+    # Поиск один раз — результаты идут и в /debug, и в answer()
     examples = engine.search(user_text)
     last_examples[chat_id] = examples
 
-    await update.message.chat.send_action("typing")
-
     try:
-        reply = engine.answer(user_text, chat_history=history if history else None)
+        reply = engine.answer(user_text, chat_history=history if history else None, examples=examples)
     except Exception as e:
         logger.error(f"Ошибка RAG: {e}")
         await update.message.reply_text("Произошла ошибка, попробуйте ещё раз.")
