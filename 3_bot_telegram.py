@@ -12,6 +12,7 @@
 import logging
 import os
 from telegram import Update
+from telegram.error import TimedOut, NetworkError
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     ContextTypes, filters,
@@ -113,12 +114,19 @@ def main():
     logger.info("Инициализирую RAG движок...")
     engine = RAGEngine()
 
-    app = Application.builder().token(token).build()
+    app = Application.builder().token(token).connect_timeout(30).read_timeout(30).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("reset", cmd_reset))
     app.add_handler(CommandHandler("debug", cmd_debug))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+    async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if isinstance(context.error, (TimedOut, NetworkError)):
+            logger.warning(f"Telegram сетевая ошибка (авто-повтор): {context.error}")
+            return
+        logger.error(f"Ошибка: {context.error}", exc_info=context.error)
+
+    app.add_error_handler(error_handler)
     logger.info("Бот запущен.")
     app.run_polling(drop_pending_updates=True)
 
