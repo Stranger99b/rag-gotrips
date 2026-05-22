@@ -29,7 +29,8 @@ SYSTEM_PROMPT = """Ты — менеджер туристической комп
 Используй их как образец стиля и содержания ответов."""
 
 TOP_K = 5
-CLAUDE_TIMEOUT = 60
+CLAUDE_TIMEOUT = 120
+EXAMPLE_MAX_CHARS = 300  # обрезаем длинные примеры чтобы не раздувать промпт
 
 
 class RAGEngine:
@@ -65,7 +66,8 @@ class RAGEngine:
         similar = examples if examples is not None else self.search(user_message)
 
         examples_block = "\n\n".join(
-            f"---\nКлиент: {ex['client_text']}\nМенеджер: {ex['manager_text']}"
+            f"---\nКлиент: {ex['client_text'][:EXAMPLE_MAX_CHARS]}\n"
+            f"Менеджер: {ex['manager_text'][:EXAMPLE_MAX_CHARS]}"
             for ex in similar
         )
 
